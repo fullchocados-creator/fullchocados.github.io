@@ -59,10 +59,12 @@
   }
   .campo input:focus, .campo textarea:focus { border-color:var(--verde-bor); background:#FAFFFE; box-shadow:0 0 0 3px rgba(67,160,71,0.15); }
   .campo.uppercase input { text-transform:uppercase; font-weight:700; font-size:1rem; letter-spacing:0.03em; }
+  .campo.uppercase input::placeholder { text-transform:none; font-weight:400; color:#aab0bb; font-style:italic; font-size:0.9rem; letter-spacing:0; }
+  .campo input::placeholder, .campo select::placeholder { color:#aab0bb; font-style:italic; font-weight:400; }
   .campo textarea { resize:vertical; min-height:90px; line-height:1.5; }
   .campo input.error { border-color:var(--error); background:#FEF2F2; }
   .campo .msg-error { font-size:0.7rem; color:var(--error); display:none; margin-top:2px; }
-  .campo input.error + .msg-error { display:block; }
+  .campo input.error ~ .msg-error, .campo select.error ~ .msg-error { display:block; }
 
   /* CÉDULA */
   .cedula-wrap { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:4px; }
@@ -150,6 +152,10 @@
   .tel-prefix { display:flex; align-items:center; }
   .tel-prefix span { background:var(--azul); color:white; padding:9px 10px; border-radius:6px 0 0 6px; font-size:0.88rem; font-weight:700; white-space:nowrap; flex-shrink:0; }
   .tel-prefix input { border-radius:0 6px 6px 0 !important; border-left:none !important; }
+
+  /* MODELO OTRO */
+  #inp-modelo-otro { border:1.5px solid var(--naranja) !important; }
+  #inp-modelo-otro.error { border:2px solid var(--error) !important; background:#FEF2F2 !important; }
 </style>
 </head>
 <body>
@@ -193,7 +199,7 @@
         </div>
         <div class="campo uppercase">
           <label>Apellido Materno *</label>
-          <input type="text" name="apellido_materno" placeholder="Apellido Materno" required>
+          <input type="text" name="apellido_materno" placeholder="Apellido materno" required>
           <span class="msg-error">Campo requerido</span>
         </div>
       </div>
@@ -202,7 +208,7 @@
         <div class="campo uppercase">
           <label>RUT *</label>
           <input type="text" name="rut" placeholder="12.345.678-9" required id="rut" maxlength="12">
-          <span class="msg-error">Ingrese un RUT válido</span>
+          <span class="msg-error" id="rut-error">Ingrese un RUT válido</span>
         </div>
         <div class="campo">
           <label>Correo Electrónico *</label>
@@ -213,7 +219,7 @@
           <label>Teléfono *</label>
           <div class="tel-prefix">
             <span>+56 9</span>
-            <input type="tel" name="telefono" placeholder="XXXX XXXX" required maxlength="9" id="telefono">
+            <input type="tel" name="telefono" placeholder="12345678" required maxlength="8" id="telefono">
           </div>
           <span class="msg-error" id="tel-error">Ingrese un teléfono válido</span>
         </div>
@@ -270,7 +276,7 @@
             <select name="vehiculo_modelo" id="sel-modelo" required onchange="checkOtroModelo()" style="border:1.5px solid var(--gris-bor);border-radius:6px;padding:9px 12px;font-size:0.95rem;font-family:'Barlow',sans-serif;font-weight:600;background:var(--gris-bg);color:var(--texto);width:100%;outline:none;">
               <option value="">— Primero elija marca —</option>
             </select>
-            <input type="text" name="vehiculo_modelo_otro" id="inp-modelo-otro" placeholder="Especifique..." style="display:none;border:1.5px solid var(--naranja);border-radius:6px;padding:9px 12px;font-size:0.95rem;font-family:'Barlow',sans-serif;font-weight:600;background:var(--gris-bg);color:var(--texto);width:100%;">
+            <input type="text" name="vehiculo_modelo_otro" id="inp-modelo-otro" placeholder="Especifique..." style="display:none;border-radius:6px;padding:9px 12px;font-size:0.95rem;font-family:'Barlow',sans-serif;font-weight:600;background:var(--gris-bg);color:var(--texto);width:100%;">
           </div>
           <span class="msg-error">Campo requerido</span>
         </div>
@@ -395,6 +401,20 @@
           <input type="text" name="num_cuenta" placeholder="Número de cuenta" required>
         </div>
       </div>
+      <!-- BOTÓN COPIAR DATOS VENDEDOR -->
+      <div style="margin-bottom:12px;">
+        <button type="button" onclick="copiarDatosVendedor()" style="
+          display:flex; align-items:center; gap:8px;
+          background:linear-gradient(135deg,var(--azul),var(--azul-med));
+          color:#fff; border:none; border-radius:8px;
+          padding:10px 20px; font-size:0.88rem; font-family:'Barlow',sans-serif;
+          font-weight:700; cursor:pointer; letter-spacing:0.03em;
+          box-shadow:0 2px 8px rgba(26,58,107,0.18); transition:opacity 0.2s;">
+          ✅ ¿Son los mismos datos del Vendedor? — Haga clic aquí para copiarlos
+        </button>
+        <p id="aviso-copiado" style="display:none;color:var(--verde);font-size:0.82rem;font-weight:700;margin-top:6px;">✔ Datos copiados correctamente</p>
+      </div>
+
       <div class="grid g-full">
         <div class="campo uppercase">
           <label>Nombre Completo del Titular de la Cuenta *</label>
@@ -404,7 +424,8 @@
       <div class="grid g2">
         <div class="campo uppercase">
           <label>RUT del Titular *</label>
-          <input type="text" name="rut_titular" placeholder="12.345.678-9" required maxlength="12">
+          <input type="text" name="rut_titular" placeholder="12.345.678-9" required id="rut-titular" maxlength="12">
+          <span class="msg-error" id="rut-titular-error">Ingrese un RUT válido</span
         </div>
         <div class="campo">
           <label>Mail del Titular *</label>
@@ -420,7 +441,8 @@
         DOCUMENTOS DEL VEHÍCULO
         <span class="sub">(marque los que entrega)</span>
       </div>
-      <p style="font-size:0.8rem;color:var(--gris-hint);margin-bottom:10px;">Marque los documentos que entrega en este acto:</p>
+      <p style="font-size:0.8rem;color:var(--gris-hint);margin-bottom:6px;">Marque los documentos que entrega en este acto:</p>
+      <p id="error-sec5" style="display:none;color:#DC2626;font-size:0.82rem;font-weight:700;margin-bottom:8px;">⚠️ Debe marcar al menos un documento</p>
       <div class="check-grid">
         <div class="check-item">
           <label class="check-label"><input type="checkbox" name="doc_padron"><span class="check-box"></span><span class="lbl">Padrón / Cert. de Inscripción</span></label>
@@ -459,7 +481,8 @@
         EQUIPAMIENTO E IMPLEMENTOS
         <span class="sub">(marque los que están en el vehículo)</span>
       </div>
-      <p style="font-size:0.8rem;color:var(--gris-hint);margin-bottom:10px;">Marque los implementos presentes. Deje en blanco si no están:</p>
+      <p style="font-size:0.8rem;color:var(--gris-hint);margin-bottom:6px;">Marque los implementos presentes. Deje en blanco si no están:</p>
+      <p id="error-sec6" style="display:none;color:#DC2626;font-size:0.82rem;font-weight:700;margin-bottom:8px;">⚠️ Debe marcar al menos un implemento</p>
       <div class="check-grid">
         <div class="check-item"><label class="check-label"><input type="checkbox" name="eq_radio"><span class="check-box"></span><span class="lbl">Radio / Sistema de Audio</span></label></div>
         <div class="check-item"><label class="check-label"><input type="checkbox" name="eq_triangulos"><span class="check-box"></span><span class="lbl">Triángulos de Seguridad</span></label></div>
@@ -480,7 +503,8 @@
       </div>
       <div class="campo">
         <label>Describa daños visibles, piezas faltantes u otras observaciones</label>
-        <textarea name="observaciones" placeholder="Describa aquí el estado general del vehículo, daños visibles, piezas faltantes u otras observaciones relevantes..."></textarea>
+        <textarea name="observaciones" id="observaciones" placeholder="Describa aquí el estado general del vehículo, daños visibles, piezas faltantes u otras observaciones relevantes..." required></textarea>
+          <span class="msg-error" id="obs-error">Debe ingresar al menos una observación (puede escribir "Sin observaciones")</span>
       </div>
     </div>
 
@@ -491,10 +515,26 @@
         DIRECCIÓN DE RETIRO DEL VEHÍCULO
         <span class="sub">(si es diferente a la dirección particular)</span>
       </div>
+
+      <!-- BOTÓN COPIAR DIRECCIÓN PARTICULAR -->
+      <div style="margin-bottom:12px;">
+        <button type="button" onclick="copiarDireccionParticular()" style="
+          display:flex; align-items:center; gap:8px;
+          background:linear-gradient(135deg,var(--verde),#1B5E20);
+          color:#fff; border:none; border-radius:8px;
+          padding:10px 20px; font-size:0.88rem; font-family:'Barlow',sans-serif;
+          font-weight:700; cursor:pointer; letter-spacing:0.03em;
+          box-shadow:0 2px 8px rgba(67,160,71,0.25); transition:opacity 0.2s;">
+          ✅ ¿El vehículo está en la dirección particular? — Haga clic aquí para copiarla
+        </button>
+        <p id="aviso-dir-copiada" style="display:none;color:var(--verde);font-size:0.82rem;font-weight:700;margin-top:6px;">✔ Dirección copiada correctamente</p>
+      </div>
+
       <div class="grid g21">
         <div class="campo uppercase">
           <label>Calle</label>
-          <input type="text" name="retiro_calle" placeholder="Nombre de la calle">
+          <input type="text" name="retiro_calle" placeholder="Nombre de la calle" required>
+          <span class="msg-error">Campo requerido</span>
         </div>
         <div class="campo uppercase">
           <label>N°</label>
@@ -504,15 +544,18 @@
       <div class="grid g3">
         <div class="campo uppercase">
           <label>Ciudad</label>
-          <input type="text" name="retiro_ciudad" placeholder="Ciudad">
+          <input type="text" name="retiro_ciudad" placeholder="Ciudad" required>
+          <span class="msg-error">Campo requerido</span>
         </div>
         <div class="campo uppercase">
           <label>Comuna</label>
-          <input type="text" name="retiro_comuna" placeholder="Comuna">
+          <input type="text" name="retiro_comuna" placeholder="Comuna" required>
+          <span class="msg-error">Campo requerido</span>
         </div>
         <div class="campo uppercase">
           <label>Región</label>
-          <input type="text" name="retiro_region" placeholder="Región">
+          <input type="text" name="retiro_region" placeholder="Región" required>
+          <span class="msg-error">Campo requerido</span>
         </div>
       </div>
     </div>
@@ -547,7 +590,11 @@
 
       <input type="hidden" id="firma_data" name="firma_data">
 
-      <button type="submit" class="btn-enviar">✔ ENVIAR FICHA DE RECEPCIÓN</button>
+      <div id="error-banner" style="display:none;background:#FEF2F2;border:2px solid #DC2626;border-radius:10px;padding:16px 20px;margin-bottom:20px;">
+      <h4 style="color:#DC2626;font-size:0.95rem;margin-bottom:10px;font-weight:700;">⚠️ Por favor complete los siguientes campos antes de enviar:</h4>
+      <ul id="error-lista" style="list-style:none;padding:0;margin:0;"></ul>
+    </div>
+    <button type="submit" class="btn-enviar">✔ ENVIAR FICHA DE RECEPCIÓN</button>
 
       <div class="success-msg" id="successMsg">
         <h3>✅ ¡Ficha enviada correctamente!</h3>
@@ -599,7 +646,7 @@ var MARCAS_MODELOS = {
   "BYD": ["Atto 3","Dolphin","Han","Tang","Seal","Song Plus","King","Otro"],
   "Changan": ["CS35","CS55","CS75","Eado","Alsvin","UNI-T","UNI-K","Otro"],
   "Chery": ["Tiggo 2","Tiggo 4","Tiggo 7","Tiggo 8","Arrizo 5","Arrizo 6","QQ","Otro"],
-  "Chevrolet": ["Spark","Sail","Aveo","Cruze","Malibu","Camaro","Tracker","Trax","Captiva","Equinox","Traverse","Tahoe","Suburban","Colorado","S10","Silverado","Otro"],
+  "Chevrolet": ["Spark","Sail","Aveo","Onix","Onix Plus","Cruze","Malibu","Camaro","Tracker","Trax","Captiva","Equinox","Traverse","Tahoe","Suburban","Colorado","S10","Silverado","Otro"],
   "Citroën": ["C3","C4","C5","Berlingo","Jumpy","Jumper","C-Elysée","C3 Aircross","C5 Aircross","Otro"],
   "DFM / Dfsk": ["Glory 330","Glory 360","Glory 500","Glory 580","K01","K02","Otro"],
   "Dodge": ["Challenger","Charger","Durango","Journey","Ram 700","Ram 1500","Otro"],
@@ -679,7 +726,8 @@ function checkOtroModelo() {
   var val = document.getElementById('sel-modelo').value;
   var inp = document.getElementById('inp-modelo-otro');
   inp.style.display = (val === 'Otro') ? 'block' : 'none';
-  if (val === 'Otro') inp.focus();
+  if (val === 'Otro') { inp.classList.remove('error'); inp.focus(); }
+  else { inp.value = ''; inp.classList.remove('error'); }
 }
 
 function actualizarComunas(selRegId, selComId) {
@@ -712,9 +760,170 @@ document.querySelectorAll('.campo.uppercase input').forEach(function(input) {
   });
 });
 
+
+// ===================== VALIDACIÓN EN TIEMPO REAL =====================
+// Marca error apenas el usuario sale del campo (blur)
+document.querySelectorAll('[required]').forEach(function(field) {
+  field.addEventListener('blur', function() {
+    if (!this.value.trim()) {
+      this.classList.add('error');
+    } else {
+      this.classList.remove('error');
+    }
+  });
+  // También limpiar error mientras escribe
+  field.addEventListener('input', function() {
+    if (this.value.trim()) {
+      this.classList.remove('error');
+    }
+  });
+  field.addEventListener('change', function() {
+    if (this.value.trim()) {
+      this.classList.remove('error');
+    } else {
+      this.classList.add('error');
+    }
+  });
+});
+
+// ===================== MODELO OTRO — limpiar error al escribir =====================
+document.getElementById('inp-modelo-otro').addEventListener('input', function() {
+  if (this.value.trim()) {
+    this.classList.remove('error');
+  } else {
+    this.classList.add('error');
+  }
+});
+document.getElementById('inp-modelo-otro').addEventListener('blur', function() {
+  var sel = document.getElementById('sel-modelo');
+  if (sel && sel.value === 'Otro' && !this.value.trim()) {
+    this.classList.add('error');
+  }
+});
+
+
+// ===================== COPIAR DATOS VENDEDOR → TITULAR =====================
+function copiarDatosVendedor() {
+  var nombre = (document.querySelector('[name="nombre"]').value || '').trim();
+  var apPat  = (document.querySelector('[name="apellido_paterno"]').value || '').trim();
+  var apMat  = (document.querySelector('[name="apellido_materno"]').value || '').trim();
+  var rut    = (document.querySelector('[name="rut"]').value || '').trim();
+  var mail   = (document.querySelector('[name="mail"]').value || '').trim();
+
+  var nombreCompleto = [nombre, apPat, apMat].filter(Boolean).join(' ');
+
+  var campoNombre = document.querySelector('[name="nombre_titular"]');
+  var campoRut    = document.querySelector('[name="rut_titular"]');
+  var campoMail   = document.querySelector('[name="mail_titular"]');
+
+  if (campoNombre) { campoNombre.value = nombreCompleto; campoNombre.classList.remove('error'); }
+  if (campoRut)    { campoRut.value = rut;               campoRut.classList.remove('error'); }
+  if (campoMail)   { campoMail.value = mail;             campoMail.classList.remove('error'); }
+
+  // Mostrar aviso
+  var aviso = document.getElementById('aviso-copiado');
+  aviso.style.display = 'block';
+  setTimeout(function(){ aviso.style.display = 'none'; }, 3000);
+}
+
+
+// ===================== VALIDACIÓN RUT CHILENO =====================
+function limpiarRUT(rut) {
+  return rut.replace(/[^0-9kK]/g, '').toUpperCase();
+}
+function formatearRUT(rut) {
+  var limpio = limpiarRUT(rut);
+  if (limpio.length < 2) return limpio;
+  var cuerpo = limpio.slice(0, -1);
+  var dv = limpio.slice(-1);
+  cuerpo = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return cuerpo + '-' + dv;
+}
+function validarRUT(rut) {
+  var limpio = limpiarRUT(rut);
+  if (limpio.length < 2) return false;
+  var cuerpo = limpio.slice(0, -1);
+  var dv = limpio.slice(-1).toUpperCase();
+  if (cuerpo.length < 7 || cuerpo.length > 8) return false;
+  var suma = 0, multiplo = 2;
+  for (var i = cuerpo.length - 1; i >= 0; i--) {
+    suma += parseInt(cuerpo[i]) * multiplo;
+    multiplo = multiplo < 7 ? multiplo + 1 : 2;
+  }
+  var dvEsperado = 11 - (suma % 11);
+  var dvStr = dvEsperado === 11 ? '0' : dvEsperado === 10 ? 'K' : String(dvEsperado);
+  return dv === dvStr;
+}
+
+function aplicarValidacionRUT(inputId, errorId) {
+  var inp = document.getElementById(inputId);
+  if (!inp) return;
+  inp.addEventListener('input', function() {
+    var limpio = limpiarRUT(this.value);
+    if (limpio.length > 1) this.value = formatearRUT(limpio);
+    // Limpiar error mientras escribe
+    this.classList.remove('error');
+    if (errorId) { var e = document.getElementById(errorId); if(e) e.style.display='none'; }
+  });
+  inp.addEventListener('blur', function() {
+    if (!this.value.trim()) return; // campo vacío lo maneja required
+    if (!validarRUT(this.value)) {
+      this.classList.add('error');
+      if (errorId) { var e = document.getElementById(errorId); if(e) { e.textContent='⚠️ RUT inválido. Verifique el dígito verificador.'; e.style.display='block'; } }
+    } else {
+      this.classList.remove('error');
+      if (errorId) { var e = document.getElementById(errorId); if(e) e.style.display='none'; }
+    }
+  });
+}
+aplicarValidacionRUT('rut', 'rut-error');
+aplicarValidacionRUT('rut-titular', 'rut-titular-error');
+
+
+// ===================== COPIAR DIRECCIÓN PARTICULAR → RETIRO =====================
+function copiarDireccionParticular() {
+  var calle   = (document.querySelector('[name="direccion"]').value || '').trim();
+  var numero  = (document.querySelector('[name="numero"]').value || '').trim();
+  var ciudad  = (document.querySelector('[name="ciudad"]').value || '').trim();
+  var comuna  = (document.querySelector('[name="comuna"]') ? document.querySelector('[name="comuna"]').options[document.querySelector('[name="comuna"]').selectedIndex]?.text : '') || '';
+  var region  = (document.querySelector('[name="region"]') ? document.querySelector('[name="region"]').options[document.querySelector('[name="region"]').selectedIndex]?.text : '') || '';
+
+  var rc = document.querySelector('[name="retiro_calle"]');
+  var rn = document.querySelector('[name="retiro_numero"]');
+  var rci = document.querySelector('[name="retiro_ciudad"]');
+  var rco = document.querySelector('[name="retiro_comuna"]');
+  var rre = document.querySelector('[name="retiro_region"]');
+
+  if (rc)  rc.value  = calle;
+  if (rn)  rn.value  = numero;
+  if (rci) rci.value = ciudad;
+  if (rco) rco.value = (comuna === '— Seleccione comuna —' || comuna === '') ? '' : comuna;
+  if (rre) rre.value = (region === '— Seleccione región —' || region === '') ? '' : region;
+
+  var aviso = document.getElementById('aviso-dir-copiada');
+  aviso.style.display = 'block';
+  setTimeout(function(){ aviso.style.display = 'none'; }, 3000);
+}
+
 // ===================== TELÉFONO — solo números =====================
 document.getElementById('telefono').addEventListener('input', function() {
   this.value = this.value.replace(/\D/g,'').substring(0,8);
+  // Limpiar error si ya tiene 8 dígitos
+  if (this.value.length === 8) {
+    this.classList.remove('error');
+    document.getElementById('tel-error').style.display = 'none';
+  }
+});
+document.getElementById('telefono').addEventListener('blur', function() {
+  var digits = this.value.replace(/\D/g,'');
+  if (digits.length < 8) {
+    this.classList.add('error');
+    document.getElementById('tel-error').textContent = '⚠️ Debe ingresar exactamente 8 dígitos (+56 9 XXXX XXXX)';
+    document.getElementById('tel-error').style.display = 'block';
+  } else {
+    this.classList.remove('error');
+    document.getElementById('tel-error').style.display = 'none';
+  }
 });
 
 // ===================== FIRMA DIGITAL =====================
@@ -775,7 +984,6 @@ async function subirCloudinary(input, previewId, boxId, urlFieldId, estadoId) {
   formData.append('file', file);
   formData.append('upload_preset', 'nic1mwjn');
   formData.append('cloud_name', 'drwewbgta');
-  formData.append('access_mode', 'public');
   try {
     var response = await fetch('https://api.cloudinary.com/v1_1/drwewbgta/image/upload', { method: 'POST', body: formData });
     var data = await response.json();
@@ -785,8 +993,15 @@ async function subirCloudinary(input, previewId, boxId, urlFieldId, estadoId) {
       hint.style.display = 'none';
       document.getElementById(boxId).querySelector('[id^="icon"]').style.display = 'none';
       document.getElementById(boxId).style.border = '2px dashed #5BACD6'; // resetear borde rojo
-    } else { hint.textContent = '❌ Error al subir. Intente nuevamente.'; hint.style.color = '#DC2626'; }
-  } catch(err) { hint.textContent = '❌ Error de conexión. Intente nuevamente.'; hint.style.color = '#DC2626'; }
+    } else { 
+      var errMsg = data.error ? data.error.message : 'Error desconocido';
+      console.error('Cloudinary error fotos:', errMsg, data);
+      hint.textContent = '❌ Error al subir: ' + errMsg; hint.style.color = '#DC2626'; 
+    }
+  } catch(err) { 
+    console.error('Error conexión fotos:', err);
+    hint.textContent = '❌ Error de conexión: ' + err.message; hint.style.color = '#DC2626'; 
+  }
 }
 
 // ===================== TOGGLE PERMISO =====================
@@ -1010,6 +1225,46 @@ document.getElementById('fichaForm').addEventListener('submit', async function(e
     else { field.classList.remove('error'); }
   });
 
+  // Validar tipo de cuenta (radio)
+  var tipoCuenta = document.querySelector('[name="tipo_cuenta"]:checked');
+  if (!tipoCuenta) {
+    document.querySelector('.tipo-cuenta').style.border = '2px solid #DC2626';
+    document.querySelector('.tipo-cuenta').style.borderRadius = '8px';
+    document.querySelector('.tipo-cuenta').style.padding = '8px';
+    valid = false;
+  } else {
+    document.querySelector('.tipo-cuenta').style.border = '';
+  }
+
+  // Validar RUT vendedor
+  var rutInp = document.getElementById('rut');
+  if (rutInp && rutInp.value.trim() && !validarRUT(rutInp.value)) {
+    rutInp.classList.add('error');
+    var re = document.getElementById('rut-error');
+    if (re) { re.textContent='⚠️ RUT inválido. Verifique el dígito verificador.'; re.style.display='block'; }
+    valid = false;
+  }
+  // Validar RUT titular
+  var rutTit = document.getElementById('rut-titular');
+  if (rutTit && rutTit.value.trim() && !validarRUT(rutTit.value)) {
+    rutTit.classList.add('error');
+    var rte = document.getElementById('rut-titular-error');
+    if (rte) { rte.textContent='⚠️ RUT inválido. Verifique el dígito verificador.'; rte.style.display='block'; }
+    valid = false;
+  }
+
+  // Validar modelo "Otro"
+  var selModelo = document.getElementById('sel-modelo');
+  var inpModeloOtro = document.getElementById('inp-modelo-otro');
+  if (selModelo && selModelo.value === 'Otro') {
+    if (!inpModeloOtro.value.trim()) {
+      inpModeloOtro.classList.add('error');
+      valid = false;
+    } else {
+      inpModeloOtro.classList.remove('error');
+    }
+  }
+
   // Validar cédula obligatoria
   var urlFrontal = document.getElementById('url-frontal').value;
   var urlPosterior = document.getElementById('url-posterior').value;
@@ -1038,7 +1293,83 @@ document.getElementById('fichaForm').addEventListener('submit', async function(e
     document.getElementById('tel-error').style.display = 'none';
   }
 
-  if (!valid) { alert('Por favor complete todos los campos obligatorios (marcados con *).'); return; }
+  // Validar sección 5: al menos un documento marcado
+  var doc_names = ['doc_padron','doc_revision','doc_soap','doc_llaves','doc_permiso','doc_manual'];
+  var algunDoc = doc_names.some(function(n){ return document.querySelector('[name="'+n+'"]:checked'); });
+  var errSec5 = document.getElementById('error-sec5');
+  if (!algunDoc) {
+    errSec5.style.display = 'block';
+    valid = false;
+  } else {
+    errSec5.style.display = 'none';
+  }
+
+  // Validar sección 6: al menos un equipamiento marcado
+  var eq_names = ['eq_radio','eq_triangulos','eq_gata','eq_antena','eq_llave_rueda','eq_extintor','eq_rueda_rep','eq_chaleco'];
+  var algunEq = eq_names.some(function(n){ return document.querySelector('[name="'+n+'"]:checked'); });
+  var errSec6 = document.getElementById('error-sec6');
+  if (!algunEq) {
+    errSec6.style.display = 'block';
+    valid = false;
+  } else {
+    errSec6.style.display = 'none';
+  }
+
+  // Validar firma digital
+  if (firmaVacia) {
+    document.getElementById('firmaCanvas').style.outline = '3px solid #DC2626';
+    document.getElementById('firmaCanvas').style.borderRadius = '6px';
+    valid = false;
+  } else {
+    document.getElementById('firmaCanvas').style.outline = '';
+  }
+
+  if (!valid) {
+    // Construir lista de errores con nombres amigables
+    var errores = [];
+    // Verificar error campo modelo otro
+    if (selModelo && selModelo.value === 'Otro' && !inpModeloOtro.value.trim()) {
+      errores.push('Modelo del vehículo (especifique en el campo de texto)');
+    }
+    var labels = {
+      'nombre': 'Nombre completo', 'apellido_paterno': 'Apellido paterno', 'apellido_materno': 'Apellido materno',
+      'rut': 'RUT', 'mail': 'Correo electrónico', 'telefono': 'Teléfono',
+      'direccion': 'Dirección — Calle', 'ciudad': 'Ciudad', 'comuna': 'Comuna', 'region': 'Región',
+      'vehiculo_marca': 'Marca del vehículo', 'vehiculo_modelo': 'Modelo del vehículo',
+      'vehiculo_anio': 'Año del vehículo', 'vehiculo_patente': 'Patente',
+      'banco': 'Banco', 'num_cuenta': 'Número de cuenta', 'numero_cuenta': 'Número de cuenta', 'titular_cuenta': 'Titular de la cuenta',
+      'rut_titular': 'RUT del titular', 'mail_titular': 'Correo del titular',
+      'retiro_calle': 'Dirección de retiro — Calle', 'retiro_ciudad': 'Dirección de retiro — Ciudad',
+      'retiro_comuna': 'Dirección de retiro — Comuna', 'retiro_region': 'Dirección de retiro — Región',
+      'observaciones': 'Observaciones (Sección 7)',
+      'nombre_titular': 'Nombre del titular bancario', 'num_cuenta': 'Número de cuenta'
+    };
+    document.querySelectorAll('[required].error').forEach(function(el) {
+      var nombre = labels[el.name] || el.closest('.campo')?.querySelector('label')?.textContent?.replace(' *','') || el.name;
+      errores.push(nombre);
+    });
+    // Agregar errores de cédula
+    if (!tipoCuenta) errores.push('Tipo de cuenta (Corriente / Vista / RUT)');
+    if (!algunDoc) errores.push('Sección 5 — Marque al menos un documento del vehículo');
+    if (!algunEq) errores.push('Sección 6 — Marque al menos un implemento del vehículo');
+    if (!document.getElementById('url-frontal').value) errores.push('Foto cédula frontal');
+    if (!document.getElementById('url-posterior').value) errores.push('Foto cédula posterior');
+    // Agregar error firma
+    if (firmaVacia) errores.push('Firma digital del vendedor');
+
+    var lista = document.getElementById('error-lista');
+    lista.innerHTML = '';
+    errores.forEach(function(e) {
+      var li = document.createElement('li'); li.textContent = e; lista.appendChild(li);
+    });
+    var banner = document.getElementById('error-banner');
+    banner.style.display = 'block';
+    // Scroll al banner
+    banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  // Ocultar banner si todo ok
+  document.getElementById('error-banner').style.display = 'none';
 
   var btn = document.querySelector('.btn-enviar');
   btn.textContent = '⏳ Generando PDF y enviando...';
