@@ -775,6 +775,7 @@ async function subirCloudinary(input, previewId, boxId, urlFieldId, estadoId) {
   formData.append('file', file);
   formData.append('upload_preset', 'nic1mwjn');
   formData.append('cloud_name', 'drwewbgta');
+  formData.append('access_mode', 'public');
   try {
     var response = await fetch('https://api.cloudinary.com/v1_1/drwewbgta/image/upload', { method: 'POST', body: formData });
     var data = await response.json();
@@ -988,11 +989,11 @@ async function subirPDFCloudinary(blob, nombre) {
   formData.append('upload_preset', 'nic1mwjn');
   formData.append('cloud_name', 'drwewbgta');
   try {
-    var r = await fetch('https://api.cloudinary.com/v1_1/drwewbgta/image/upload', { method:'POST', body:formData });
+    var r = await fetch('https://api.cloudinary.com/v1_1/drwewbgta/raw/upload', { method:'POST', body:formData });
     var d = await r.json();
     if (d.secure_url) {
       // Agregar fl_attachment para que el link descargue directamente el PDF
-      return d.secure_url.replace('/image/upload/', '/image/upload/fl_attachment/');
+      return d.secure_url;
     }
     return null;
   } catch(e) { return null; }
