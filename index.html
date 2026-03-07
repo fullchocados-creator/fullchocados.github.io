@@ -1193,9 +1193,13 @@ function generarPDFBlob(datos, firmaImg) {
 }
 
 function descargarPDF() {
-  var firma = canvas.toDataURL('image/png');
+  if (!datosGlobales || !datosGlobales.nombre) {
+    alert('Complete y envíe el formulario primero para descargar el PDF.');
+    return;
+  }
+  var firma = firmaVacia ? null : canvas.toDataURL('image/png');
   var doc = generarPDFBlob(datosGlobales, firma);
-  doc.save('Ficha_Recepcion_' + (datosGlobales.apellido_paterno||'Vendedor') + '.pdf');
+  doc.save('Ficha_Recepcion_' + (datosGlobales.apellido_paterno||'Vendedor') + '_' + (datosGlobales.vehiculo_patente||'') + '.pdf');
 }
 
 async function subirPDFCloudinary(blob, nombre) {
@@ -1402,20 +1406,41 @@ document.getElementById('fichaForm').addEventListener('submit', async function(e
     retiro_ciudad: datos.get('retiro_ciudad'), retiro_comuna: datos.get('retiro_comuna'), retiro_region: datos.get('retiro_region'),
   };
 
-  // Generar PDF y subir a Cloudinary
+  // Generar PDF
   var firmaImg = firmaVacia ? null : canvas.toDataURL('image/png');
   var pdfUrl = null;
+  var pdfBlob = null;
+  var nombrePDF = 'Ficha_' + (datosGlobales.apellido_paterno||'Vendedor') + '_' + (datosGlobales.vehiculo_patente||'') + '.pdf';
+
   try {
     var doc = generarPDFBlob(datosGlobales, firmaImg);
-    var pdfBlob = doc.output('blob');
-    var nombrePDF = 'Ficha_' + (datosGlobales.apellido_paterno||'Vendedor') + '_' + (datosGlobales.vehiculo_patente||'') + '.pdf';
+    pdfBlob = doc.output('blob');
+
+    // --- DESCARGA INMEDIATA para el usuario ---
+    var urlDescarga = URL.createObjectURL(pdfBlob);
+    var linkDesc = document.createElement('a');
+    linkDesc.href = urlDescarga;
+    linkDesc.download = nombrePDF;
+    document.body.appendChild(linkDesc);
+    linkDesc.click();
+    document.body.removeChild(linkDesc);
+    setTimeout(function(){ URL.revokeObjectURL(urlDescarga); }, 3000);
+
+    // --- SUBIR a Cloudinary para el correo ---
     pdfUrl = await subirPDFCloudinary(pdfBlob, nombrePDF);
-  } catch(err) { console.warn('PDF error:', err); }
+    if (!pdfUrl) console.warn('Cloudinary: no se obtuvo URL del PDF');
+  } catch(err) {
+    console.warn('PDF error:', err);
+  }
 
   // Construir mensaje correo
   var msg = '=== FICHA RECEPCION VEHICULO — FULL CHOCADOS ===\n\n';
   msg += 'Fecha: ' + (fecha||'No indicada') + '\n\n';
-  if (pdfUrl) msg += '📄 PDF FICHA COMPLETA: ' + pdfUrl + '\n\n';
+  if (pdfUrl) {
+    msg += '📄 PDF FICHA COMPLETA: ' + pdfUrl + '\n\n';
+  } else {
+    msg += '⚠️ PDF no disponible (error al subir) — revisar con el vendedor\n\n';
+  }
   msg += '--- DATOS PERSONALES ---\n';
   msg += 'Nombre: ' + (datosGlobales.nombre||'') + '\n';
   msg += 'Apellido Paterno: ' + (datosGlobales.apellido_paterno||'') + '\n';
