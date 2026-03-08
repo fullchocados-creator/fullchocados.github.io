@@ -961,21 +961,35 @@ var firmaVacia = true;
 // Ajustar resolución canvas
 function resizeCanvas() {
   var rect = canvas.getBoundingClientRect();
-  canvas.width = rect.width * window.devicePixelRatio;
-  canvas.height = rect.height * window.devicePixelRatio;
-  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  var dpr = window.devicePixelRatio || 1;
+  // Guardar firma actual antes de redimensionar
+  var imgData = null;
+  try { if (!firmaVacia) imgData = canvas.toDataURL(); } catch(e) {}
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.strokeStyle = '#1A3A6B';
   ctx.lineWidth = 2.5;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
+  // Restaurar firma si existía
+  if (imgData) {
+    var img = new Image();
+    img.onload = function() { ctx.drawImage(img, 0, 0, rect.width, rect.height); };
+    img.src = imgData;
+  }
 }
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
 function getPosicion(e) {
   var rect = canvas.getBoundingClientRect();
-  if (e.touches) {
-    return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+  var scaleX = rect.width > 0 ? rect.width / rect.width : 1; // siempre 1 con setTransform
+  if (e.touches && e.touches.length > 0) {
+    return {
+      x: (e.touches[0].clientX - rect.left),
+      y: (e.touches[0].clientY - rect.top)
+    };
   }
   return { x: e.clientX - rect.left, y: e.clientY - rect.top };
 }
@@ -984,9 +998,37 @@ canvas.addEventListener('mousedown', function(e) { dibujando = true; firmaVacia 
 canvas.addEventListener('mousemove', function(e) { if (!dibujando) return; var p = getPosicion(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
 canvas.addEventListener('mouseup', function() { dibujando = false; });
 canvas.addEventListener('mouseleave', function() { dibujando = false; });
-canvas.addEventListener('touchstart', function(e) { e.preventDefault(); dibujando = true; firmaVacia = false; var p = getPosicion(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }, { passive: false });
-canvas.addEventListener('touchmove', function(e) { e.preventDefault(); if (!dibujando) return; var p = getPosicion(e); ctx.lineTo(p.x, p.y); ctx.stroke(); }, { passive: false });
-canvas.addEventListener('touchend', function() { dibujando = false; });
+canvas.addEventListener('touchstart', function(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  dibujando = true;
+  firmaVacia = false;
+  document.getElementById('firmaCanvas').style.outline = ''; // limpiar error visual
+  var p = getPosicion(e);
+  ctx.beginPath();
+  ctx.moveTo(p.x, p.y);
+}, { passive: false });
+
+canvas.addEventListener('touchmove', function(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  if (!dibujando) return;
+  var p = getPosicion(e);
+  ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+}, { passive: false });
+
+canvas.addEventListener('touchend', function(e) {
+  e.preventDefault();
+  dibujando = false;
+  // Guardar snapshot de firma en campo hidden para respaldo
+  try {
+    var snap = canvas.toDataURL('image/png');
+    if (snap && snap.length > 1000) {
+      document.getElementById('firma_data').value = snap;
+    }
+  } catch(es) {}
+}, { passive: false });
 
 function borrarFirma() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1456,7 +1498,22 @@ document.getElementById('fichaForm').addEventListener('submit', async function(e
   };
 
   // Generar PDF (sin interrumpir el flujo si falla)
-  var firmaImg = firmaVacia ? null : canvas.toDataURL('image/png');
+  // Capturar firma compatible iPhone — usar snapshot guardado como respaldo
+  var firmaImg = null;
+  if (!firmaVacia) {
+    try {
+      firmaImg = canvas.toDataURL('image/png');
+      if (!firmaImg || firmaImg === 'data:,' || firmaImg.length < 1000) {
+        // Respaldo: usar snapshot guardado en campo hidden
+        var snap = document.getElementById('firma_data').value;
+        if (snap && snap.length > 1000) firmaImg = snap;
+        else firmaImg = null;
+      }
+    } catch(ef) {
+      var snap2 = document.getElementById('firma_data').value;
+      firmaImg = (snap2 && snap2.length > 1000) ? snap2 : null;
+    }
+  }
   var pdfUrl = null;
   var pdfBlob = null;
   var nombrePDF = 'Ficha_' + (datosGlobales.apellido_paterno||'Vendedor') + '_' + (datosGlobales.vehiculo_patente||'') + '.pdf';
