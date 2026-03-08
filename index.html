@@ -599,6 +599,7 @@
       <div class="success-msg" id="successMsg">
         <h3>✅ ¡Ficha enviada correctamente!</h3>
         <p>Hemos recibido la información. Full Chocados se pondrá en contacto contigo a la brevedad.</p>
+        <p style="font-size:0.82rem;color:#1A3A6B;margin-bottom:10px;">📱 <strong>Si está en iPhone o Android:</strong> use el botón de abajo para descargar su copia en PDF.</p>
         <button type="button" class="btn-pdf" onclick="descargarPDF()">📄 Descargar mi copia en PDF</button>
       </div>
     </div>
@@ -1415,7 +1416,7 @@ document.getElementById('fichaForm').addEventListener('submit', async function(e
     retiro_ciudad: datos.get('retiro_ciudad'), retiro_comuna: datos.get('retiro_comuna'), retiro_region: datos.get('retiro_region'),
   };
 
-  // Generar PDF
+  // Generar PDF (sin interrumpir el flujo si falla)
   var firmaImg = firmaVacia ? null : canvas.toDataURL('image/png');
   var pdfUrl = null;
   var pdfBlob = null;
@@ -1424,20 +1425,8 @@ document.getElementById('fichaForm').addEventListener('submit', async function(e
   try {
     var doc = generarPDFBlob(datosGlobales, firmaImg);
     pdfBlob = doc.output('blob');
-
-    // --- DESCARGA INMEDIATA para el usuario ---
-    var urlDescarga = URL.createObjectURL(pdfBlob);
-    var linkDesc = document.createElement('a');
-    linkDesc.href = urlDescarga;
-    linkDesc.download = nombrePDF;
-    document.body.appendChild(linkDesc);
-    linkDesc.click();
-    document.body.removeChild(linkDesc);
-    setTimeout(function(){ URL.revokeObjectURL(urlDescarga); }, 3000);
-
-    // --- SUBIR a Cloudinary para el correo ---
+    // Subir PDF para obtener URL (sin bloquear)
     pdfUrl = await subirPDFCloudinary(pdfBlob, nombrePDF);
-    if (!pdfUrl) console.warn('Cloudinary: no se obtuvo URL del PDF');
   } catch(err) {
     console.warn('PDF error:', err);
   }
@@ -1498,6 +1487,22 @@ document.getElementById('fichaForm').addEventListener('submit', async function(e
       btn.textContent = '✔ FICHA ENVIADA';
       btn.style.background = 'linear-gradient(135deg, #64748B, #475569)';
       document.getElementById('successMsg').scrollIntoView({ behavior:'smooth' });
+
+      // --- DESCARGA PDF para el usuario (DESPUÉS del envío exitoso) ---
+      // En móvil/iPhone se usa el botón "Descargar copia" en vez de descarga automática
+      var esMovil = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (!esMovil && pdfBlob) {
+        try {
+          var urlDesc = URL.createObjectURL(pdfBlob);
+          var aDesc = document.createElement('a');
+          aDesc.href = urlDesc;
+          aDesc.download = nombrePDF;
+          document.body.appendChild(aDesc);
+          aDesc.click();
+          document.body.removeChild(aDesc);
+          setTimeout(function(){ URL.revokeObjectURL(urlDesc); }, 3000);
+        } catch(ed) { console.warn('Descarga automática no disponible:', ed); }
+      }
     } else { throw new Error('Error'); }
   } catch(err) {
     btn.textContent = '✔ ENVIAR FICHA DE RECEPCIÓN';
