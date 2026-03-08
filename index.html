@@ -364,6 +364,7 @@
           <label class="cta-opcion"><input type="radio" name="tipo_cuenta" value="Cuenta Corriente"><span class="cta-pill">Cta. Corriente</span></label>
           <label class="cta-opcion"><input type="radio" name="tipo_cuenta" value="Cuenta Vista"><span class="cta-pill">Cta. Vista</span></label>
           <label class="cta-opcion"><input type="radio" name="tipo_cuenta" value="Cuenta RUT"><span class="cta-pill">Cta. RUT</span></label>
+          <label class="cta-opcion"><input type="radio" name="tipo_cuenta" value="Chequera Electrónica"><span class="cta-pill">Chequera Elec.</span></label>
         </div>
       </div>
       <div class="grid g2">
@@ -492,6 +493,20 @@
         <div class="check-item"><label class="check-label"><input type="checkbox" name="eq_extintor"><span class="check-box"></span><span class="lbl">Extintor</span></label></div>
         <div class="check-item"><label class="check-label"><input type="checkbox" name="eq_rueda_rep"><span class="check-box"></span><span class="lbl">Rueda de Repuesto / Galletita</span></label></div>
         <div class="check-item"><label class="check-label"><input type="checkbox" name="eq_chaleco"><span class="check-box"></span><span class="lbl">Chaleco Reflectante</span></label></div>
+        <div class="check-item">
+          <label class="check-label">
+            <input type="checkbox" name="eq_otro" id="chk-eq-otro" onchange="toggleEqOtro()">
+            <span class="check-box"></span>
+            <span class="lbl">Otro</span>
+          </label>
+        </div>
+      </div>
+      <!-- Campo texto "Otro" equipamiento -->
+      <div id="box-eq-otro" style="display:none;margin-top:10px;">
+        <input type="text" name="eq_otro_texto" id="eq-otro-texto"
+          placeholder="Describa el implemento adicional..."
+          style="width:100%;border:1.5px solid var(--naranja);border-radius:6px;padding:9px 12px;font-size:0.95rem;font-family:'Barlow',sans-serif;font-weight:600;background:var(--gris-bg);color:var(--texto);">
+        <span class="msg-error" id="eq-otro-error">Describa el implemento adicional</span>
       </div>
     </div>
 
@@ -906,6 +921,16 @@ function copiarDireccionParticular() {
   setTimeout(function(){ aviso.style.display = 'none'; }, 3000);
 }
 
+// ===================== EQUIPAMIENTO OTRO =====================
+function toggleEqOtro() {
+  var chk = document.getElementById('chk-eq-otro');
+  var box = document.getElementById('box-eq-otro');
+  var inp = document.getElementById('eq-otro-texto');
+  box.style.display = chk.checked ? 'block' : 'none';
+  if (chk.checked) { inp.focus(); }
+  else { inp.value = ''; inp.style.border = '1.5px solid var(--naranja)'; }
+}
+
 // ===================== TELÉFONO — solo números =====================
 document.getElementById('telefono').addEventListener('input', function() {
   this.value = this.value.replace(/\D/g,'').substring(0,8);
@@ -1129,6 +1154,7 @@ function generarPDFBlob(datos, firmaImg) {
     ['Extintor', datos.eq_extintor ? 'SÍ' : 'NO'],
     ['Rueda Repuesto', datos.eq_rueda_rep ? 'SÍ' : 'NO'],
     ['Chaleco Reflectante', datos.eq_chaleco ? 'SÍ' : 'NO'],
+    ['Otro Implemento', datos.eq_otro ? (datos.eq_otro_texto || 'SÍ') : 'NO'],
   ];
   for (var i = 0; i < equip.length; i += 4) {
     if (y > ph - 20) { doc.addPage(); y = mg; }
@@ -1318,8 +1344,20 @@ document.getElementById('fichaForm').addEventListener('submit', async function(e
     errSec5.style.display = 'none';
   }
 
+  // Validar campo texto de "Otro" en equipamiento
+  var chkEqOtro = document.getElementById('chk-eq-otro');
+  var inpEqOtro = document.getElementById('eq-otro-texto');
+  if (chkEqOtro && chkEqOtro.checked && !inpEqOtro.value.trim()) {
+    inpEqOtro.style.border = '2px solid #DC2626';
+    document.getElementById('eq-otro-error').style.display = 'block';
+    valid = false;
+  } else if (inpEqOtro) {
+    inpEqOtro.style.border = '1.5px solid var(--naranja)';
+    document.getElementById('eq-otro-error').style.display = 'none';
+  }
+
   // Validar sección 6: al menos un equipamiento marcado
-  var eq_names = ['eq_radio','eq_triangulos','eq_gata','eq_antena','eq_llave_rueda','eq_extintor','eq_rueda_rep','eq_chaleco'];
+  var eq_names = ['eq_radio','eq_triangulos','eq_gata','eq_antena','eq_llave_rueda','eq_extintor','eq_rueda_rep','eq_chaleco','eq_otro'];
   var algunEq = eq_names.some(function(n){ return document.querySelector('[name="'+n+'"]:checked'); });
   var errSec6 = document.getElementById('error-sec6');
   if (!algunEq) {
@@ -1410,6 +1448,7 @@ document.getElementById('fichaForm').addEventListener('submit', async function(e
     eq_radio: datos.get('eq_radio'), eq_triangulos: datos.get('eq_triangulos'), eq_gata: datos.get('eq_gata'),
     eq_antena: datos.get('eq_antena'), eq_llave_rueda: datos.get('eq_llave_rueda'), eq_extintor: datos.get('eq_extintor'),
     eq_rueda_rep: datos.get('eq_rueda_rep'), eq_chaleco: datos.get('eq_chaleco'),
+    eq_otro: datos.get('eq_otro'), eq_otro_texto: datos.get('eq_otro_texto'),
     url_cedula_frontal: datos.get('url_cedula_frontal'), url_cedula_posterior: datos.get('url_cedula_posterior'),
     observaciones: datos.get('observaciones'),
     retiro_calle: datos.get('retiro_calle'), retiro_numero: datos.get('retiro_numero'),
